@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mini PKI Simulator</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header>
+      <img
+        alt="Gold certificate seal with a key"
+        src="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='46' fill='%23f2b94b'/%3E%3Ccircle cx='50' cy='50' r='38' fill='none' stroke='%231b1500' stroke-width='3' stroke-dasharray='4 3'/%3E%3Ccircle cx='38' cy='50' r='11' fill='none' stroke='%231b1500' stroke-width='6'/%3E%3Cpath d='M49 50h28M68 50v10M76 50v8' stroke='%231b1500' stroke-width='6' fill='none'/%3E%3C/svg%3E"
+      />
+      <div>
+        <h1>Mini PKI Simulator</h1>
+      </div>
+      <nav>
+        <a href="#flow">Workflow</a><a href="#issue">1 Issue</a><a href="#verify">2 Verify</a><a href="#math">RSA maths</a
+        ><a href="#media">Media</a><a href="#log">Event log</a>
+      </nav>
+    </header>
+    <main>
+      <section id="flow">
+        <h2>How the simulator works</h2>
+        <ol class="flow">
+          <li><b>Root CA</b>Creates an RSA key pair and signs its own certificate. It is the trust anchor.</li>
+          <li><b>Intermediate CA</b>The Root signs the Intermediate's certificate. The Root then stays offline.</li>
+          <li><b>User certificate</b>The Intermediate signs a user's name, email and public key.</li>
+          <li><b>Verify chain</b>Check signatures up to a trusted Root, plus dates and revocation.</li>
+          <li><b>Revoke</b>The CA publishes a signed revocation list (CRL) of serial numbers.</li>
+        </ol>
+        <p>
+          Everything runs in your browser with real RSA-2048 and SHA-256. Learn more:
+          <a href="https://datatracker.ietf.org/doc/html/rfc5280" target="_blank" rel="noopener">RFC 5280 (X.509 and CRL)</a>
+        </p>
+      </section>
+
+      <section id="issue">
+        <h2>Step 1: Register and get a certificate</h2>
+        <p id="caStatus">Building the CA hierarchy...</p>
+        <div class="row">
+          <form id="regForm" novalidate>
+            <label for="name">Full name</label><input id="name" placeholder="e.g. Shaikh Mujammil" />
+            <p class="err" id="e-name"></p>
+            <label for="email">Email</label><input id="email" type="email" placeholder="you@example.com" />
+            <p class="err" id="e-email"></p>
+            <label for="org">Organisation</label><input id="org" placeholder="e.g. SAKEC" />
+            <p class="err" id="e-org"></p>
+            <label for="days">Validity</label>
+            <select id="days">
+              <option value="365">1 year</option>
+              <option value="30">30 days</option>
+              <option value="-1">Already expired (for testing)</option>
+            </select>
+            <button id="issueBtn" disabled>Generate keys and issue certificate</button>
+          </form>
+          <div>
+            <h3>Trust store and CA certificates</h3>
+            <pre id="caInfo">Loading...</pre>
+          </div>
+        </div>
+        <h3>Issued certificates</h3>
+        <table id="certTable">
+          <thead>
+            <tr>
+              <th>Serial</th>
+              <th>Subject</th>
+              <th>Email</th>
+              <th>Organisation</th>
+              <th>Fingerprint</th>
+              <th>Expires</th>
+              <th>Status</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr id="emptyRow">
+              <td colspan="8">No certificates yet. Fill in the form.</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="verify">
+        <h2>Step 2: Verify a certificate chain</h2>
+        <label for="certSelect">Certificate to check</label>
+        <select id="certSelect">
+          <option value="">No certificates yet</option>
+        </select>
+        <button id="vBtn" class="ghost">Verify chain</button>
+        <button id="tBtn" class="red">Attack: change the name</button>
+        <button id="fBtn" class="red">Attack: forged by a rogue CA</button>
+        <div class="chain" aria-label="Chain of trust">
+          <div class="node" id="n-root">Root CA<small>trust anchor</small></div>
+          <span class="arrow">&rarr;</span>
+          <div class="node" id="n-inter">Intermediate CA<small>issuing CA</small></div>
+          <span class="arrow">&rarr;</span>
+          <div class="node" id="n-leaf">User certificate<small>end entity</small></div>
+        </div>
+        <ul id="steps"></ul>
+        <div id="verdict" class="verdict" role="status">Choose a certificate and press Verify.</div>
+        <h3>Certificate data (the text the CA signed)</h3>
+        <pre id="certView">Nothing selected.</pre>
+      </section>
+
+      <section id="math">
+        <h2>RSA in a nutshell (tiny numbers)</h2>
+        <p>
+          Using p=61 and q=53: n=3233, public key e=17, private key d=2753. A signature is <code>m^d mod n</code> and it is checked with
+          <code>s^e mod n</code>.
+        </p>
+        <label for="msg">Message number (0 to 3232)</label><input id="msg" type="number" min="0" max="3232" value="65" />
+        <button id="mathBtn" class="ghost">Sign and verify</button>
+        <p id="mathOut" role="status">Press the button.</p>
+      </section>
+
+      <section id="media">
+        <h2>Media</h2>
+        <div class="row">
+          <div>
+            <h3>Video walkthrough</h3>
+            <video controls preload="metadata">
+              <source src="media/pki-demo.mp4" type="video/mp4" />
+              Video not supported.
+            </video>
+          </div>
+          <div>
+            <h3>Audio explanation</h3>
+            <audio controls preload="none">
+              <source src="media/pki-explained.mp3" type="audio/mpeg" />
+              Audio not supported.
+            </audio>
+          </div>
+        </div>
+      </section>
+
+      <section id="log">
+        <h2>Event log</h2>
+        <button id="clearBtn" class="red">Clear history</button>
+        <table>
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Event</th>
+            </tr>
+          </thead>
+          <tbody id="logBody"></tbody>
+        </table>
+      </section>
+    </main>
+    <footer>
+      Mini PKI Simulator | Cryptography and Security Microproject | Shaikh Mujammil (39), Swayam Mahulkar (54)<br />For learning only. Keys
+      stay in your browser.
+    </footer>
+    <script src="script.js"></script>
+  </body>
+</html>
